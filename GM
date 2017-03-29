@@ -1,0 +1,25 @@
+import pandas as pd
+import numpy as np
+import math 
+df = pd.read_excel('C:/Users/User/Desktop/eastData.xlsx')
+x_train= df.iloc[:len(df)-528]
+x_test = df.iloc[4752:]
+X0=np.array(x_train['cpu利用率'])
+B = np.zeros([len(x_train)-1,2])
+Y = np.zeros([len(x_train)-1,1])
+X1 = [sum(X0[:i+1])  for i in range(len(x_train))]
+for i in range(0,len(X0)-1):
+    B[i][0]=-0.5*(X1[i]+X1[i+1])
+    B[i][1] = 1
+    Y[i][0] = X0[i+1]
+A = np.linalg.inv(B.T.dot(B)).dot(B.T).dot(Y)
+a = A[0][0]
+u = A[1][0]
+X_actual = np.array(x_test['cpu利用率'])
+XX1 = np.zeros(len(X_actual))
+for i in range(0,len(X_actual)):
+    XX1[i] = (X0[0]-u/a)*math.exp(-a*(i-1+4752))+u/a
+X_predict = [XX1[i] - XX1[i-1] for i in range(1,len(X_actual))]
+X_predict.insert(0,XX1[0]-X1[len(X1)-1])
+MAE = sum([math.fabs(X_predict[i]-X_actual[i]) for i in range(len(X_predict))])/len(X_actual)
+RMSE =  sum([(X_predict[i]-X_actual[i])**2 for i in range(len(X_predict))])/len(X_actual)
