@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+import pandas as pd
+#import matplotlib as plt
+import matplotlib.pyplot as plt
+from datetime import datetime
+#data=pd.read_excel('/home/ishuai/cloudOpt/data/eastData.xlsx',index_col=u'时间')
+data=pd.read_excel('/home/ishuai/cloudOpt/data/eastData.xlsx',index_col=u'时间')
+
+x_train = data.iloc[: len(data)-528] #
+x_text=data.iloc[4752:]
+
+'''
+def datetime_toString(dt):
+    return dt.strftime("%H:%M:%S")
+'''
+'''
+for i in range(5280):
+    data.iloc[:,0][i]=data.iloc[:,0][i].strftime("%H:%M:%S")
+'''
+
+'''
+#平稳性检验的代码
+#参数初始化
+discfile = 'E:/Project/discPrediction/ishuai/demo/data/discdata_processed.xls'
+predictnum =5 #不使用最后5个数据
+
+data = pd.read_excel(discfile)
+x_train = data.iloc[: len(data)-528] #不检测最后528个数据
+x_text=data.iloc[4752:]
+
+rolmean=pd.rolling_mean(data,window=12)
+rolstd=pd.rolling_std(data,window=12)
+mean=plt.plot(rolmean,color='red',label='rolling_mean')
+std=plt.plot(rolstd,color='black',label='rolling_std')
+
+#平稳性检测
+
+from statsmodels.tsa.stattools import adfuller as ADF
+diff = 0
+adf = ADF(x_train.iloc[:,0])
+while adf[1] > 0.05:
+  diff = diff + 1
+  adf = ADF(data.diff(diff).dropna())
+
+print(u'原始序列经过%s阶差分后归于平稳，p值为%s' %(diff, adf[1]))
+
+
+
+#白噪声检测
+from statsmodels.stats.diagnostic import acorr_ljungbox
+[[lb], [p]] = acorr_ljungbox(x_train.iloc[:,0], lags = 1)
+j=1
+while p> 0.05:
+    [[lb], [p]] = acorr_ljungbox(x_train.iloc[:,0].diff(j).dropna(), lags = 1)
+    j=j+1
+print(u'%s阶差分序列为白噪声序列，对应的p值为：%s' %(j,p)
+
+'''
+
+'''
+#模型定阶
+from statsmodels.tsa.arima_model import ARIMA
+
+pmax = 5 #一般阶数不超过length/10
+qmax = 5 #一般阶数不超过length/10
+bic_matrix = [] #bic矩阵
+for p in range(pmax+1):
+  tmp = []
+  for q in range(qmax+1):
+    try: #存在部分报错，所以用try来跳过报错。
+      tmp.append(ARIMA(x_train, (p,1,q)).fit().bic)
+    except:
+      tmp.append(None)
+  bic_matrix.append(tmp)
+bic_matrix = pd.DataFrame(bic_matrix) #从中可以找出最小值,list转为dataframe
+p,q = bic_matrix.stack().idxmin() #先用stack展平，然后用idxmin找出最小值位置。
+print(u'BIC最小的p值和q值为：%s、%s' %(p,q))
+  
+'''
+'''
+#模型检验
+lagnum = 12 #残差延迟个数
+from statsmodels.tsa.arima_model import ARIMA #建立ARIMA(0,1,1)模型
+
+arima = ARIMA(xdata, (0, 1, 1)).fit() #建立并训练模型
+xdata_pred = arima.predict(typ = 'levels') #预测
+pred_error = (xdata_pred - xdata).dropna() #计算残差
+
+from statsmodels.stats.diagnostic import acorr_ljungbox #白噪声检验
+
+lb, p= acorr_ljungbox(pred_error, lags = lagnum)
+h = (p < 0.05).sum() #p值小于0.05，认为是非白噪声。
+if h > 0:
+  print(u'模型ARIMA(0,1,1)不符合白噪声检验')
+else:
+  print(u'模型ARIMA(0,1,1)符合白噪声检验')
+  
+  '''
+''' 
+
+#计算误差
+abs_ = (data[u'预测值'] - data[u'实际值']).abs()
+mae_ = abs_.mean() # mae
+rmse_ = ((abs_**2).mean())**0.5 # rmse
+mape_ = (abs_/data[u'实际值']).mean() # mape
+
+print(u'平均绝对误差为：%0.4f，\n均方根误差为：%0.4f，\n平均绝对百分误差为：%0.6f。' %(mae_, rmse_, mape_))
+'''
